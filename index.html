@@ -903,7 +903,7 @@ function showResult(key, couponId) {
     ? `<button class="btn-gold" onclick="nextDraw()">🎯 もう1回くじを引く（残り${remaining}回）</button>`
     : '';
 
-  const couponUrl = couponId ? (location.origin + location.pathname + '?coupon=' + couponId) : '';
+  const couponUrl = couponId ? buildCouponUrl(couponId, key) : '';
   const couponLink = couponId ? `
       <div class="coupon-link-box">
         <div class="coupon-link-label">お客様受け渡し用リンク</div>
@@ -1034,59 +1034,51 @@ function closeAdmin() {
 }
 
 // ══ COUPON PAGE ══
-const COUPON_COLORS = {'1等':'r-ichi','2等':'r-ni','3等':'r-san'};
-const COUPON_RBCLS  = {'1等':'rb-ichi','2等':'rb-ni','3等':'rb-san'};
-const COUPON_SYMS   = {'1等':'🥇','2等':'🥈','3等':'🥉'};
+const COUPON_COLORS = {ichi:'r-ichi',ni:'r-ni',san:'r-san'};
+const COUPON_RBCLS  = {ichi:'rb-ichi',ni:'rb-ni',san:'rb-san'};
 
-async function showCouponPage(couponId) {
-  showLoading('クーポン情報を取得中...');
-  try {
-    const r = await fetch(API_URL + '?action=coupon&id=' + encodeURIComponent(couponId), {redirect:'follow'});
-    const data = await r.json();
-    hideLoading();
-    if(!data.ok) {
-      document.getElementById('coupon-content').innerHTML =
-        '<div class="coupon-page"><p style="font-size:14px;color:var(--red);margin:2rem 0;">クーポンが見つかりません</p>' +
-        '<p style="font-size:11px;color:var(--text-dim);">ID: ' + couponId + '</p></div>';
-      show('sc-coupon');
-      return;
-    }
-    const c = data.coupon;
-    const rank = c.rank || '';
-    const sym = COUPON_SYMS[rank] || '🎁';
-    const rcls = COUPON_RBCLS[rank] || 'rb-san';
-    const ncls = COUPON_COLORS[rank] || 'r-san';
-    const isUsed = c.status === '使用済';
-    document.getElementById('coupon-content').innerHTML = `
-      <div class="coupon-page">
-        <div class="result-badge ${rcls}" style="animation:none;opacity:1;">${sym}</div>
-        <p class="coupon-rank ${ncls}">${rank}</p>
-        <p class="coupon-prize">${c.prize}</p>
-        <p class="coupon-date">当選日時: ${c.date}</p>
-        <p class="coupon-id">ID: ${c.id}</p>
-        <div class="coupon-status ${isUsed ? 'cs-used' : 'cs-unused'}">${c.status}</div>
-        <div class="coupon-note">
-          このページをスタッフにご提示ください。<br>
-          景品の交換・返品・換金はできません。
-        </div>
-      </div>`;
-    show('sc-coupon');
-  } catch(e) {
-    hideLoading();
-    document.getElementById('coupon-content').innerHTML =
-      '<div class="coupon-page"><p style="color:var(--red);">通信エラー</p></div>';
-    show('sc-coupon');
-  }
+function buildCouponUrl(couponId, key) {
+  const p = new URLSearchParams({
+    coupon: couponId,
+    k: key,
+    p: NAMES[key],
+    d: new Date().toLocaleString('ja-JP', {timeZone:'Asia/Tokyo'})
+  });
+  return location.origin + location.pathname + '?' + p.toString();
+}
+
+function showCouponPage(params) {
+  const couponId = params.get('coupon');
+  const key = params.get('k') || 'san';
+  const prize = params.get('p') || '';
+  const date = params.get('d') || '';
+  const sym = SYMS[key] || '🥉';
+  const rcls = COUPON_RBCLS[key] || 'rb-san';
+  const ncls = COUPON_COLORS[key] || 'r-san';
+  const rank = RANKS[key] || '3 等';
+
+  document.getElementById('coupon-content').innerHTML = `
+    <div class="coupon-page">
+      <div class="result-badge ${rcls}" style="animation:none;opacity:1;">${sym}</div>
+      <p class="coupon-rank ${ncls}">${rank}</p>
+      <p class="coupon-prize">${prize}</p>
+      <p class="coupon-date">${date}</p>
+      <p class="coupon-id">ID: ${couponId}</p>
+      <div class="coupon-note">
+        このページをスタッフにご提示ください。<br>
+        景品の交換・返品・換金はできません。
+      </div>
+    </div>`;
+  show('sc-coupon');
 }
 
 // ══ INIT ══
 (async function init() {
-  // クーポンページ判定
+  // クーポンページ判定（API接続不要で即表示）
   const params = new URLSearchParams(location.search);
-  const couponParam = params.get('coupon');
-  if(couponParam && API_URL) {
+  if(params.get('coupon') && params.get('k')) {
     document.querySelector('.stage').style.display = '';
-    await showCouponPage(couponParam);
+    showCouponPage(params);
     return;
   }
 
