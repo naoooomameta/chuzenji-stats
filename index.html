@@ -1068,8 +1068,30 @@ function showCouponPage(params) {
         このページをスタッフにご提示ください。<br>
         景品の交換・返品・換金はできません。
       </div>
+      <button class="btn-primary" id="btn-redeem" onclick="redeemCoupon('${couponId}')" style="margin-top:1rem;">
+        使用済にする
+      </button>
+      <p id="redeem-msg" style="font-size:10px;color:var(--text-dim);margin-top:.4rem;"></p>
     </div>`;
   show('sc-coupon');
+}
+
+async function redeemCoupon(couponId) {
+  const btn = document.getElementById('btn-redeem');
+  const msg = document.getElementById('redeem-msg');
+  if(!API_URL) { msg.textContent = '※ スタッフ端末から操作してください'; return; }
+  btn.disabled = true; btn.textContent = '処理中...';
+  try {
+    const res = await apiPost({action:'redeem', id: couponId});
+    if(!res.ok) throw new Error(res.error);
+    btn.textContent = '✓ 使用済';
+    btn.style.background = '#9ab8a8';
+    msg.textContent = 'スプレッドシートを更新しました';
+  } catch(e) {
+    btn.disabled = false; btn.textContent = '使用済にする';
+    msg.textContent = 'エラー: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
 }
 
 // ══ INIT ══
