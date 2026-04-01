@@ -236,6 +236,12 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 .a-info b{color:var(--green);}
 .a-note{font-size:10px;color:var(--text-dim);margin-top:10px;line-height:1.8;}
 
+/* TERMS */
+.terms{font-size:9px;color:var(--text-dim);line-height:1.9;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);}
+.terms b{color:var(--text-muted);font-weight:600;display:block;margin-bottom:3px;font-size:10px;}
+.terms ul{padding-left:1.2em;margin:0;}
+.terms li{margin-bottom:1px;}
+
 /* MOBILE RESPONSIVE */
 @media screen and (max-width:480px){
   body{align-items:flex-start;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;}
@@ -431,6 +437,21 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 
         <p id="extra-note">✨ 5,000円以上：くじが2回引けます！</p>
         <button class="btn-primary" id="btn-issue" onclick="issueKuji()">くじを発行する</button>
+
+        <div class="terms">
+          <b>ご利用条件・注意事項</b>
+          <ul>
+            <li>当日のお買い上げ金額 3,000円（税込）以上で1回抽選できます</li>
+            <li>5,000円（税込）以上で2回抽選できます</li>
+            <li>お一人様、1会計につき最大2回までとなります</li>
+            <li>景品がなくなり次第、終了となります</li>
+            <li>当選結果に関するお問い合わせにはお答えできません</li>
+            <li>景品の交換・返品・換金はできません</li>
+            <li>クーポンの有効期限は発行日より90日間です</li>
+            <li>本キャンペーンの内容は予告なく変更・終了する場合があります</li>
+            <li>スタッフの指示に従ってご参加ください</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -455,6 +476,10 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
           <p class="ready-sub">ボタンをタップして<br>くじの結果を確認してください</p>
           <button class="btn-draw" onclick="startDraw()">▶ くじを引く</button>
           <p id="draws-left"></p>
+          <p style="font-size:8px;color:var(--text-dim);margin-top:.8rem;line-height:1.8;">
+            ※ 当選結果に関するお問い合わせにはお答えできません<br>
+            ※ 景品の交換・返品・換金はできません
+          </p>
         </div>
       </div>
     </div>
