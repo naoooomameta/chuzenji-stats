@@ -281,6 +281,33 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
   .stock-count{font-size:13px;}
   .prize-name{font-size:11px;}
 }
+
+/* SETUP OVERLAY */
+#setup-overlay{position:fixed;inset:0;z-index:6000;background:var(--bg);
+  display:none;align-items:center;justify-content:center;flex-direction:column;}
+#setup-overlay.active{display:flex;}
+.setup-card{width:min(380px,90vw);}
+.setup-url{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:11px;padding:10px 12px;outline:none;font-family:'Zen Kaku Gothic New',monospace;
+  transition:border-color .2s,box-shadow .2s;margin-bottom:.8rem;}
+.setup-url:focus{border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(42,163,106,.13);}
+.setup-url::placeholder{color:var(--text-dim);}
+.setup-steps{font-size:10px;color:var(--text-dim);line-height:2;margin-top:1rem;
+  background:var(--green-light);border-radius:8px;padding:10px 14px;border:1px solid #b0d0bc;}
+.setup-steps b{color:var(--green);}
+
+/* LOADING OVERLAY */
+#loading-overlay{position:fixed;inset:0;z-index:5500;
+  background:rgba(221,234,226,.85);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+#loading-overlay.active{display:flex;}
+.ld-dots{display:flex;gap:6px;}
+.ld-dot{width:10px;height:10px;border-radius:50%;background:var(--green);
+  animation:ld-bounce .6s infinite alternate;}
+.ld-dot:nth-child(2){animation-delay:.15s;}
+.ld-dot:nth-child(3){animation-delay:.3s;}
+@keyframes ld-bounce{to{opacity:.25;transform:translateY(-8px);}}
+.ld-text{font-size:11px;color:var(--text-muted);letter-spacing:.08em;}
 </style>
 </head>
 <body>
@@ -310,6 +337,44 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 <canvas id="cc"></canvas>
 <div id="aura"></div>
 <div id="toast"></div>
+
+<!-- SETUP OVERLAY -->
+<div id="setup-overlay">
+  <div class="setup-card">
+    <div class="card">
+      <div class="card-header" style="justify-content:center;">
+        <div class="header-text" style="text-align:center;flex:1;">
+          <div class="store-name" style="font-size:18px;">INITIAL SETUP</div>
+          <div class="store-sub">HOSONO FISHING HOUSE &bull; 感謝くじ</div>
+        </div>
+      </div>
+      <div class="header-accent"></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);line-height:1.8;margin-bottom:1rem;text-align:center;">
+          Google Apps Script の URL を入力して<br>スプレッドシートと接続してください
+        </p>
+        <input id="api-url-input" type="url" class="setup-url"
+          placeholder="https://script.google.com/macros/s/…/exec">
+        <button id="btn-connect" class="btn-primary" onclick="connectApi()">接続する</button>
+        <div class="setup-steps">
+          <b>セットアップ手順:</b><br>
+          1. Google スプレッドシートを新規作成<br>
+          2.「拡張機能」→「Apps Script」を開く<br>
+          3. google-apps-script.gs のコードを貼り付け<br>
+          4. setupSheets を実行してシート初期化<br>
+          5.「デプロイ」→「ウェブアプリ」として公開<br>
+          6. 表示された URL をここに貼り付け
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay">
+  <div class="ld-dots"><div class="ld-dot"></div><div class="ld-dot"></div><div class="ld-dot"></div></div>
+  <div class="ld-text">スプレッドシートに接続中...</div>
+</div>
 
 <div class="stage">
 
@@ -484,13 +549,40 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
     <button class="btn-a" onclick="saveCfg()">設定を保存</button>
   </div>
 
-  <div class="a-info"><b>URLに ?admin を付けると</b>このパネルが開きます。在庫・設定はブラウザに保存されます。<br>※ 複数端末で運用する場合は在庫の同期が必要です。</div>
+  <div class="a-sec">
+    <div class="a-ttl">API 接続</div>
+    <div class="a-row"><span class="a-row-label">Apps Script URL</span></div>
+    <input id="a-api-url" type="url" class="setup-url" style="font-size:10px;margin-bottom:6px;">
+    <button class="btn-a" onclick="changeApiUrl()">URL を変更</button>
+  </div>
+
+  <div class="a-info"><b>URLに ?admin を付けると</b>このパネルが開きます。<br>在庫はGoogleスプレッドシートで一元管理されます。複数端末で同じ在庫を共有できます。</div>
   <p class="a-note">景品表示法：最高景品額は購入金額の20倍以内（最大10万円）を守ってください。</p>
 </div>
 
 <script>
-// ══ INITIAL CONFIG ══
-const INIT_STOCK = {ichi:6, ni:3, san:50};
+// ══ API CONFIG ══
+const API_KEY = 'hfh_api_url';
+let API_URL = localStorage.getItem(API_KEY) || '';
+
+async function apiGet() {
+  const r = await fetch(API_URL, {redirect:'follow'});
+  if (!r.ok) throw new Error('通信エラー (' + r.status + ')');
+  return r.json();
+}
+async function apiPost(data) {
+  const r = await fetch(API_URL, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify(data),
+    redirect:'follow'
+  });
+  if (!r.ok) throw new Error('通信エラー (' + r.status + ')');
+  return r.json();
+}
+
+// ══ STATE ══
+let INIT_STOCK = {ichi:6, ni:3, san:50};
 let stock = {...INIT_STOCK};
 let minAmount = 3000;
 let bonusAmount = 5000;
@@ -512,38 +604,86 @@ const AURA_COL = {
   san: 'radial-gradient(ellipse 70% 60% at 50% 50%,rgba(120,72,30,.3) 0%,transparent 70%)'
 };
 
-// ══ STORAGE ══
-function saveState() {
-  localStorage.setItem('hfh_stock', JSON.stringify(stock));
-  localStorage.setItem('hfh_cfg4', JSON.stringify({minAmount, bonusAmount}));
+// ══ SETUP / LOADING ══
+function showLoading(msg) {
+  const ov = document.getElementById('loading-overlay');
+  if(msg) ov.querySelector('.ld-text').textContent = msg;
+  ov.classList.add('active');
 }
-function loadState() {
+function hideLoading() { document.getElementById('loading-overlay').classList.remove('active'); }
+
+function checkSetup() {
+  if(!API_URL) {
+    document.getElementById('setup-overlay').classList.add('active');
+    document.querySelector('.stage').style.display = 'none';
+    return false;
+  }
+  return true;
+}
+
+async function connectApi() {
+  const input = document.getElementById('api-url-input');
+  const url = input.value.trim();
+  if(!url) { toast('URLを入力してください'); return; }
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true; btn.textContent = '接続中...';
   try {
-    const s = localStorage.getItem('hfh_stock');
-    if (s) stock = Object.assign({...INIT_STOCK}, JSON.parse(s));
-    const c = localStorage.getItem('hfh_cfg4');
-    if (c) {const p=JSON.parse(c); minAmount=p.minAmount||3000; bonusAmount=p.bonusAmount||5000;}
-  } catch(e) {}
+    const r = await fetch(url, {redirect:'follow'});
+    const data = await r.json();
+    if(!data.ok) throw new Error(data.error || '接続に失敗しました');
+    API_URL = url;
+    localStorage.setItem(API_KEY, url);
+    applyStatus(data);
+    document.getElementById('setup-overlay').classList.remove('active');
+    document.querySelector('.stage').style.display = '';
+    updateStockUI();
+    toast('スプレッドシートに接続しました ✓');
+  } catch(e) {
+    toast('接続失敗: ' + e.message, 4000);
+  } finally {
+    btn.disabled = false; btn.textContent = '接続する';
+  }
+}
+
+function changeApiUrl() {
+  const url = document.getElementById('a-api-url').value.trim();
+  if(!url) { toast('URLを入力してください'); return; }
+  API_URL = url;
+  localStorage.setItem(API_KEY, url);
+  toast('API URLを更新しました ✓');
+  fetchStatus();
+}
+
+// ══ FETCH STATUS ══
+function applyStatus(data) {
+  if(data.stock) stock = data.stock;
+  if(data.config) {
+    minAmount = data.config.minAmount || 3000;
+    bonusAmount = data.config.bonusAmount || 5000;
+    if(data.config.initStock) INIT_STOCK = data.config.initStock;
+  }
+  localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
+}
+
+async function fetchStatus() {
+  try {
+    const data = await apiGet();
+    if(!data.ok) throw new Error(data.error);
+    applyStatus(data);
+    updateStockUI();
+  } catch(e) {
+    // フォールバック: ローカルキャッシュ
+    try {
+      const c = JSON.parse(localStorage.getItem('hfh_cache'));
+      if(c) { stock=c.stock; minAmount=c.minAmount; bonusAmount=c.bonusAmount; INIT_STOCK=c.INIT_STOCK; }
+      updateStockUI();
+    } catch(e2) {}
+    toast('⚠ 通信エラー（キャッシュ表示中）', 3500);
+  }
 }
 
 // ══ STOCK UTILS ══
 function totalStock() { return stock.ichi + stock.ni + stock.san; }
-function buildPool() {
-  const pool = [];
-  for(let i=0;i<stock.ichi;i++) pool.push('ichi');
-  for(let i=0;i<stock.ni;i++)  pool.push('ni');
-  for(let i=0;i<stock.san;i++) pool.push('san');
-  return pool;
-}
-function drawOne() {
-  const pool = buildPool();
-  if(pool.length === 0) return null;
-  const idx = Math.floor(Math.random() * pool.length);
-  const key = pool[idx];
-  stock[key]--;
-  saveState();
-  return key;
-}
 function updateStockUI() {
   ['ichi','ni','san'].forEach(k => {
     const cur = stock[k];
@@ -583,6 +723,7 @@ function updateStockUI() {
       btn.textContent = 'くじを発行する';
     }
   }
+  updateSoldoutCount();
 }
 
 // ══ HELPERS ══
@@ -597,20 +738,31 @@ function toast(msg, d=2600) {
 }
 
 // ══ ISSUE ══
-function issueKuji() {
-  if(totalStock() === 0) { show('sc-soldout'); return; }
-  const v = parseInt(document.getElementById('amount').value) || 0;
-  const err = document.getElementById('amt-err');
-  if(v < minAmount) { err.textContent = minAmount.toLocaleString() + '円以上のお買い上げが対象です'; return; }
-  err.textContent = '';
-  // Bonus: 2 draws only if enough stock
-  drawsTotal = (v >= bonusAmount && totalStock() >= 2) ? 2 : 1;
-  drawsDone = 0;
-  document.getElementById('purchase-badge').textContent = '¥' + v.toLocaleString() + ' お買い上げ';
-  const dl = document.getElementById('draws-left');
-  if(drawsTotal > 1) { dl.style.display='block'; dl.textContent='⭐ ' + bonusAmount.toLocaleString() + '円以上のため2回引けます！'; }
-  else dl.style.display='none';
-  show('sc-ready');
+let currentAmount = 0;
+async function issueKuji() {
+  const btn = document.getElementById('btn-issue');
+  btn.disabled = true; btn.textContent = '在庫を確認中...';
+  try {
+    // サーバーから最新在庫を取得
+    await fetchStatus();
+    if(totalStock() === 0) { show('sc-soldout'); return; }
+    const v = parseInt(document.getElementById('amount').value) || 0;
+    const err = document.getElementById('amt-err');
+    if(v < minAmount) { err.textContent = minAmount.toLocaleString() + '円以上のお買い上げが対象です'; updateStockUI(); return; }
+    err.textContent = '';
+    currentAmount = v;
+    drawsTotal = (v >= bonusAmount && totalStock() >= 2) ? 2 : 1;
+    drawsDone = 0;
+    document.getElementById('purchase-badge').textContent = '¥' + v.toLocaleString() + ' お買い上げ';
+    const dl = document.getElementById('draws-left');
+    if(drawsTotal > 1) { dl.style.display='block'; dl.textContent='⭐ ' + bonusAmount.toLocaleString() + '円以上のため2回引けます！'; }
+    else dl.style.display='none';
+    show('sc-ready');
+  } catch(e) {
+    toast('通信エラー: ' + e.message, 3500);
+  } finally {
+    updateStockUI();
+  }
 }
 
 // ══ AMOUNT LIVE ══
@@ -621,13 +773,27 @@ document.getElementById('amount').addEventListener('input', function() {
 });
 
 // ══ DRAW ══
-function startDraw() {
+async function startDraw() {
   if(totalStock() === 0) { show('sc-soldout'); return; }
-  const key = drawOne();
-  if(!key) { show('sc-soldout'); return; }
-  updateStockUI();
-  show('sc-spin');
-  buildSlot(key);
+  const btn = document.querySelector('#sc-ready .btn-draw');
+  if(btn) { btn.disabled = true; btn.textContent = '抽選中...'; }
+  try {
+    const res = await apiPost({action:'draw', amount: currentAmount});
+    if(!res.ok) {
+      if(res.soldout) { show('sc-soldout'); return; }
+      throw new Error(res.error || '抽選に失敗しました');
+    }
+    stock = res.stock;
+    localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
+    updateStockUI();
+    show('sc-spin');
+    buildSlot(res.key);
+  } catch(e) {
+    toast('エラー: ' + e.message, 3500);
+    await fetchStatus();
+  } finally {
+    if(btn) { btn.disabled = false; btn.textContent = '▶ くじを引く'; }
+  }
 }
 
 function buildSlot(finalKey) {
@@ -701,18 +867,20 @@ function nextDraw() {
   show('sc-ready');
   document.getElementById('draws-left').style.display = 'none';
 }
-function backToStaff() {
+async function backToStaff() {
   document.getElementById('amount').value = '';
   document.getElementById('amt-err').textContent = '';
   document.getElementById('extra-note').style.display = 'none';
   drawsTotal = 1; drawsDone = 0;
+  await fetchStatus();
   if(totalStock() === 0) { show('sc-soldout'); return; }
   show('sc-staff');
-  updateStockUI();
 }
 
 // ══ SOLD OUT ══
-document.getElementById('soldout-count').textContent = INIT_STOCK.ichi + INIT_STOCK.ni + INIT_STOCK.san;
+function updateSoldoutCount() {
+  document.getElementById('soldout-count').textContent = INIT_STOCK.ichi + INIT_STOCK.ni + INIT_STOCK.san;
+}
 
 // ══ CONFETTI ══
 function confetti() {
@@ -749,6 +917,7 @@ function initAdmin() {
   document.getElementById('ar-ichi').value = INIT_STOCK.ichi;
   document.getElementById('ar-ni').value = INIT_STOCK.ni;
   document.getElementById('ar-san').value = INIT_STOCK.san;
+  document.getElementById('a-api-url').value = API_URL;
   document.getElementById('apanel').style.display = 'block';
   document.getElementById('abk').style.display = 'block';
   updateAdminBars();
@@ -761,21 +930,35 @@ function updateAdminBars() {
     if(ab) ab.style.width = INIT_STOCK[k] > 0 ? (stock[k]/INIT_STOCK[k]*100)+'%' : '0%';
   });
 }
-function resetStock() {
-  stock.ichi = parseInt(document.getElementById('ar-ichi').value) || 0;
-  stock.ni   = parseInt(document.getElementById('ar-ni').value)   || 0;
-  stock.san  = parseInt(document.getElementById('ar-san').value)  || 0;
-  saveState();
-  updateStockUI();
-  updateAdminBars();
-  toast('在庫をリセットしました（計' + totalStock() + '枚）');
+async function resetStock() {
+  const ichi = parseInt(document.getElementById('ar-ichi').value) || 0;
+  const ni   = parseInt(document.getElementById('ar-ni').value)   || 0;
+  const san  = parseInt(document.getElementById('ar-san').value)  || 0;
+  try {
+    const res = await apiPost({action:'reset', ichi, ni, san});
+    if(!res.ok) throw new Error(res.error);
+    stock = res.stock;
+    INIT_STOCK = {ichi, ni, san};
+    localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
+    updateStockUI();
+    updateAdminBars();
+    toast('在庫をリセットしました（計' + totalStock() + '枚）');
+  } catch(e) {
+    toast('エラー: ' + e.message, 3500);
+  }
 }
-function saveCfg() {
+async function saveCfg() {
   minAmount   = parseInt(document.getElementById('a-min').value)   || 3000;
   bonusAmount = parseInt(document.getElementById('a-bonus').value) || 5000;
-  saveState();
-  toast('設定を保存しました ✓');
-  closeAdmin();
+  try {
+    const res = await apiPost({action:'config', minAmount, bonusAmount});
+    if(!res.ok) throw new Error(res.error);
+    localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
+    toast('設定を保存しました ✓');
+    closeAdmin();
+  } catch(e) {
+    toast('エラー: ' + e.message, 3500);
+  }
 }
 function closeAdmin() {
   document.getElementById('apanel').style.display = 'none';
@@ -783,9 +966,21 @@ function closeAdmin() {
 }
 
 // ══ INIT ══
-loadState();
-updateStockUI();
-initAdmin();
+(async function init() {
+  // ローカルキャッシュから仮表示
+  try {
+    const c = JSON.parse(localStorage.getItem('hfh_cache'));
+    if(c) { stock=c.stock; minAmount=c.minAmount; bonusAmount=c.bonusAmount; INIT_STOCK=c.INIT_STOCK; }
+  } catch(e) {}
+  updateStockUI();
+
+  if(!checkSetup()) return;
+
+  showLoading('スプレッドシートに接続中...');
+  await fetchStatus();
+  hideLoading();
+  initAdmin();
+})();
 </script>
 </body>
 </html>
