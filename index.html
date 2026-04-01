@@ -850,11 +850,6 @@ function showResult(key) {
       <p class="r-name ${NCLS[key]}">${RANKS[key].replace(' ','')}</p>
       <p class="r-prize-name">${NAMES[key]}</p>
       <p class="r-how">${note}</p>
-      <div class="prize-summary">
-        <div class="ps-item ${key==='ichi'?'act-ichi':''}"><div class="ps-label">1等</div><div class="ps-val">残り${stock.ichi}枚</div></div>
-        <div class="ps-item ${key==='ni'?'act-ni':''}"><div class="ps-label">2等</div><div class="ps-val">残り${stock.ni}枚</div></div>
-        <div class="ps-item ${key==='san'?'act-san':''}"><div class="ps-label">3等</div><div class="ps-val">残り${stock.san}枚</div></div>
-      </div>
       <div class="action-col">
         ${extraBtn}
         <button class="btn-ghost" onclick="backToStaff()">↩ スタッフ画面に戻る</button>
