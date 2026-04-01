@@ -34,20 +34,27 @@ const PRIZE_NAMES = {
 };
 const PRIZE_RANKS = {ichi: '1等', ni: '2等', san: '3等'};
 
-/* ── GET: 在庫・設定を返す ── */
+/* ── GET: 在庫・設定・利用規約を返す / クーポン照会 ── */
 function doGet(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const stockSheet  = ss.getSheetByName('在庫');
-    const configSheet = ss.getSheetByName('設定');
+    var action = (e && e.parameter && e.parameter.action) || 'status';
 
-    const stock = {
+    // クーポン照会
+    if (action === 'coupon') {
+      return handleCouponLookup(e.parameter.id);
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var stockSheet  = ss.getSheetByName('在庫');
+    var configSheet = ss.getSheetByName('設定');
+
+    var stock = {
       ichi: Number(stockSheet.getRange('B1').getValue()) || 0,
       ni:   Number(stockSheet.getRange('B2').getValue()) || 0,
       san:  Number(stockSheet.getRange('B3').getValue()) || 0
     };
 
-    const config = {
+    var config = {
       minAmount:   Number(configSheet.getRange('B1').getValue()) || 3000,
       bonusAmount: Number(configSheet.getRange('B2').getValue()) || 5000,
       initStock: {
@@ -57,10 +64,52 @@ function doGet(e) {
       }
     };
 
-    return jsonOut({ok: true, stock, config});
+    // 利用規約の読み取り
+    var terms = [];
+    var termsSheet = ss.getSheetByName('利用規約');
+    if (termsSheet) {
+      var lastRow = termsSheet.getLastRow();
+      if (lastRow >= 2) {
+        var data = termsSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+        for (var i = 0; i < data.length; i++) {
+          var v = String(data[i][0]).trim();
+          if (v) terms.push(v);
+        }
+      }
+    }
+
+    return jsonOut({ok: true, stock: stock, config: config, terms: terms});
   } catch (err) {
     return jsonOut({ok: false, error: err.message});
   }
+}
+
+/* ── クーポン照会 ── */
+function handleCouponLookup(id) {
+  if (!id) return jsonOut({ok: false, error: 'クーポンIDが指定されていません'});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logSheet = ss.getSheetByName('ログ');
+  var lastRow = logSheet.getLastRow();
+  if (lastRow < 2) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+
+  var data = logSheet.getRange(2, 1, lastRow - 1, 7).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (String(data[i][5]) === id) {
+      return jsonOut({
+        ok: true,
+        coupon: {
+          id: id,
+          date: Utilities.formatDate(new Date(data[i][0]), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm'),
+          amount: data[i][1],
+          rank: data[i][2],
+          prize: data[i][3],
+          status: data[i][6] || '未使用'
+        }
+      });
+    }
+  }
+  return jsonOut({ok: false, error: 'クーポンが見つかりません'});
 }
 
 /* ── POST: 抽選・リセット・設定変更 ── */
@@ -118,16 +167,21 @@ function handleDraw(data) {
   stockSheet.getRange('B2').setValue(stock.ni);
   stockSheet.getRange('B3').setValue(stock.san);
 
-  // ログ記録
+  // クーポンID生成
+  var couponId = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+
+  // ログ記録（F列: クーポンID、G列: ステータス）
   logSheet.appendRow([
     new Date(),
     data.amount || 0,
     PRIZE_RANKS[key],
     PRIZE_NAMES[key],
-    stock.ichi + stock.ni + stock.san
+    stock.ichi + stock.ni + stock.san,
+    couponId,
+    '未使用'
   ]);
 
-  return jsonOut({ok: true, key: key, stock: stock});
+  return jsonOut({ok: true, key: key, stock: stock, couponId: couponId});
 }
 
 /* ── 在庫リセット ── */
@@ -199,13 +253,30 @@ function setupSheets() {
 
   // ── ログシート ──
   s = ss.getSheetByName('ログ') || ss.insertSheet('ログ');
-  s.getRange('A1:E1').setValues([['日時', '購入金額', '等', '景品', '残り在庫合計']]);
-  s.getRange('A1:E1').setFontWeight('bold');
+  s.getRange('A1:G1').setValues([['日時', '購入金額', '等', '景品', '残り在庫合計', 'クーポンID', 'ステータス']]);
+  s.getRange('A1:G1').setFontWeight('bold');
   s.setColumnWidth(1, 180);
   s.setColumnWidth(2, 100);
   s.setColumnWidth(3, 60);
   s.setColumnWidth(4, 180);
   s.setColumnWidth(5, 120);
+  s.setColumnWidth(6, 160);
+  s.setColumnWidth(7, 80);
+
+  // ── 利用規約シート ──
+  s = ss.getSheetByName('利用規約') || ss.insertSheet('利用規約');
+  s.getRange('A1').setValue('利用規約（1行に1項目）');
+  s.getRange('A1').setFontWeight('bold');
+  s.getRange('A2').setValue('当日のお買い上げ金額 3,000円（税込）以上で1回抽選できます');
+  s.getRange('A3').setValue('5,000円（税込）以上で2回抽選できます');
+  s.getRange('A4').setValue('お一人様、1会計につき最大2回までとなります');
+  s.getRange('A5').setValue('景品がなくなり次第、終了となります');
+  s.getRange('A6').setValue('当選結果に関するお問い合わせにはお答えできません');
+  s.getRange('A7').setValue('景品の交換・返品・換金はできません');
+  s.getRange('A8').setValue('クーポンの有効期限は発行日より90日間です');
+  s.getRange('A9').setValue('本キャンペーンの内容は予告なく変更・終了する場合があります');
+  s.getRange('A10').setValue('スタッフの指示に従ってご参加ください');
+  s.setColumnWidth(1, 500);
 
   // デフォルトの Sheet1 / シート1 を削除
   var sheet1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('シート1');
