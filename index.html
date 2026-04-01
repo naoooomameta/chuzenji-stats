@@ -242,6 +242,28 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 .terms ul{padding-left:1.2em;margin:0;}
 .terms li{margin-bottom:1px;}
 
+/* COUPON PAGE */
+.coupon-page{text-align:center;padding:1rem 0 .5rem;}
+.coupon-badge{display:inline-block;background:var(--green-light);border:1px solid #9eceb0;border-radius:20px;
+  padding:5px 18px;font-size:12px;font-weight:600;color:var(--green);margin-bottom:.6rem;letter-spacing:.04em;}
+.coupon-rank{font-family:'Noto Serif JP',serif;font-size:26px;font-weight:600;letter-spacing:.1em;margin-bottom:4px;}
+.coupon-prize{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.coupon-date{font-size:10px;color:var(--text-dim);margin-bottom:.4rem;}
+.coupon-id{font-size:9px;color:var(--text-dim);letter-spacing:.06em;margin-bottom:.8rem;word-break:break-all;}
+.coupon-status{display:inline-block;padding:4px 16px;border-radius:16px;font-size:11px;font-weight:600;margin-bottom:.8rem;}
+.cs-unused{background:var(--green-light);color:var(--green);border:1px solid #9eceb0;}
+.cs-used{background:#f0f0f0;color:#aaa;border:1px solid #ddd;}
+.coupon-note{font-size:10px;color:var(--text-muted);line-height:1.9;background:var(--surface2);
+  border-radius:8px;padding:10px 14px;border:1px solid var(--border);text-align:left;}
+.coupon-link-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 14px;margin:.8rem 0;text-align:center;}
+.coupon-link-box a{font-size:11px;color:var(--green);word-break:break-all;}
+.coupon-link-label{font-size:9px;color:var(--text-dim);margin-bottom:4px;}
+.btn-copy{background:var(--green);color:#fff;border:none;border-radius:8px;padding:8px 20px;
+  font-size:11px;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;letter-spacing:.06em;
+  transition:background .18s;margin-top:6px;}
+.btn-copy:hover{background:#156040;}
+
 /* MOBILE RESPONSIVE */
 @media screen and (max-width:480px){
   body{align-items:flex-start;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;}
@@ -438,20 +460,7 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
         <p id="extra-note">✨ 5,000円以上：くじが2回引けます！</p>
         <button class="btn-primary" id="btn-issue" onclick="issueKuji()">くじを発行する</button>
 
-        <div class="terms">
-          <b>ご利用条件・注意事項</b>
-          <ul>
-            <li>当日のお買い上げ金額 3,000円（税込）以上で1回抽選できます</li>
-            <li>5,000円（税込）以上で2回抽選できます</li>
-            <li>お一人様、1会計につき最大2回までとなります</li>
-            <li>景品がなくなり次第、終了となります</li>
-            <li>当選結果に関するお問い合わせにはお答えできません</li>
-            <li>景品の交換・返品・換金はできません</li>
-            <li>クーポンの有効期限は発行日より90日間です</li>
-            <li>本キャンペーンの内容は予告なく変更・終了する場合があります</li>
-            <li>スタッフの指示に従ってご参加ください</li>
-          </ul>
-        </div>
+        <div class="terms" id="terms-area"></div>
       </div>
     </div>
   </div>
@@ -476,10 +485,7 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
           <p class="ready-sub">ボタンをタップして<br>くじの結果を確認してください</p>
           <button class="btn-draw" onclick="startDraw()">▶ くじを引く</button>
           <p id="draws-left"></p>
-          <p style="font-size:8px;color:var(--text-dim);margin-top:.8rem;line-height:1.8;">
-            ※ 当選結果に関するお問い合わせにはお答えできません<br>
-            ※ 景品の交換・返品・換金はできません
-          </p>
+          <p class="terms" id="terms-ready" style="border:none;padding-top:0;margin-top:.5rem;"></p>
         </div>
       </div>
     </div>
@@ -536,6 +542,22 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
           <p class="soldout-total">本日の当選数：<b id="soldout-count">59</b> 名様</p>
           <button class="btn-ghost" onclick="show('sc-staff')" style="max-width:240px;margin:0 auto;">← スタッフ画面に戻る</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 6: COUPON (受け渡しページ) -->
+  <div class="screen" id="sc-coupon">
+    <div class="card">
+      <div class="card-header" style="justify-content:center;">
+        <div class="header-text" style="text-align:center;flex:1;">
+          <div class="store-name" style="font-size:18px;">HOSONO FISHING HOUSE</div>
+          <div class="store-sub">Chuzenji Lake &bull; Trout Campaign</div>
+        </div>
+      </div>
+      <div class="header-accent"></div>
+      <div class="card-body">
+        <div id="coupon-content"></div>
       </div>
     </div>
   </div>
@@ -687,6 +709,18 @@ function applyStatus(data) {
     bonusAmount = data.config.bonusAmount || 5000;
     if(data.config.initStock) INIT_STOCK = data.config.initStock;
   }
+  // 利用規約を表示
+  if(data.terms && data.terms.length > 0) {
+    const html = '<b>ご利用条件・注意事項</b><ul>' + data.terms.map(t => '<li>' + t + '</li>').join('') + '</ul>';
+    const ta = document.getElementById('terms-area');
+    if(ta) ta.innerHTML = html;
+    // Ready画面にはコンパクト版（最後の2項目）
+    const tr = document.getElementById('terms-ready');
+    if(tr) {
+      const short = data.terms.slice(-2).map(t => '※ ' + t).join('<br>');
+      tr.innerHTML = short;
+    }
+  }
   localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
 }
 
@@ -812,7 +846,7 @@ async function startDraw() {
     localStorage.setItem('hfh_cache', JSON.stringify({stock, minAmount, bonusAmount, INIT_STOCK}));
     updateStockUI();
     show('sc-spin');
-    buildSlot(res.key);
+    buildSlot(res.key, res.couponId);
   } catch(e) {
     toast('エラー: ' + e.message, 3500);
     await fetchStatus();
@@ -821,7 +855,7 @@ async function startDraw() {
   }
 }
 
-function buildSlot(finalKey) {
+function buildSlot(finalKey, couponId) {
   const track = document.getElementById('slot-track');
   const msg = document.getElementById('spin-msg');
   msg.textContent = '抽選しています...'; msg.className = 'spin-msg';
@@ -844,7 +878,7 @@ function buildSlot(finalKey) {
   setTimeout(() => {
     showAura(finalKey, () => {
       drawsDone++;
-      showResult(finalKey);
+      showResult(finalKey, couponId);
       if(finalKey === 'ichi') confetti();
     });
   }, 3000);
@@ -858,14 +892,24 @@ function showAura(key, cb) {
 }
 
 // ══ RESULT ══
-function showResult(key) {
+let lastCouponId = '';
+function showResult(key, couponId) {
   show('sc-result');
+  lastCouponId = couponId || '';
   const remaining = drawsTotal - drawsDone;
   const hasStock = totalStock() > 0;
   const note = (NOTES[key] || '').replace(/\n/g, '<br>');
   const extraBtn = (remaining > 0 && hasStock)
     ? `<button class="btn-gold" onclick="nextDraw()">🎯 もう1回くじを引く（残り${remaining}回）</button>`
     : '';
+
+  const couponUrl = couponId ? (location.origin + location.pathname + '?coupon=' + couponId) : '';
+  const couponLink = couponId ? `
+      <div class="coupon-link-box">
+        <div class="coupon-link-label">お客様受け渡し用リンク</div>
+        <a href="${couponUrl}" target="_blank">${couponUrl}</a><br>
+        <button class="btn-copy" onclick="copyCouponLink('${couponUrl}')">URLをコピー</button>
+      </div>` : '';
 
   document.getElementById('result-content').innerHTML = `
     <div class="result-body">
@@ -875,11 +919,15 @@ function showResult(key) {
       <p class="r-name ${NCLS[key]}">${RANKS[key].replace(' ','')}</p>
       <p class="r-prize-name">${NAMES[key]}</p>
       <p class="r-how">${note}</p>
+      ${couponLink}
       <div class="action-col">
         ${extraBtn}
         <button class="btn-ghost" onclick="backToStaff()">↩ スタッフ画面に戻る</button>
       </div>
     </div>`;
+}
+function copyCouponLink(url) {
+  navigator.clipboard.writeText(url).then(() => toast('URLをコピーしました ✓'));
 }
 
 function nextDraw() {
@@ -985,8 +1033,63 @@ function closeAdmin() {
   document.getElementById('abk').style.display = 'none';
 }
 
+// ══ COUPON PAGE ══
+const COUPON_COLORS = {'1等':'r-ichi','2等':'r-ni','3等':'r-san'};
+const COUPON_RBCLS  = {'1等':'rb-ichi','2等':'rb-ni','3等':'rb-san'};
+const COUPON_SYMS   = {'1等':'🥇','2等':'🥈','3等':'🥉'};
+
+async function showCouponPage(couponId) {
+  showLoading('クーポン情報を取得中...');
+  try {
+    const r = await fetch(API_URL + '?action=coupon&id=' + encodeURIComponent(couponId), {redirect:'follow'});
+    const data = await r.json();
+    hideLoading();
+    if(!data.ok) {
+      document.getElementById('coupon-content').innerHTML =
+        '<div class="coupon-page"><p style="font-size:14px;color:var(--red);margin:2rem 0;">クーポンが見つかりません</p>' +
+        '<p style="font-size:11px;color:var(--text-dim);">ID: ' + couponId + '</p></div>';
+      show('sc-coupon');
+      return;
+    }
+    const c = data.coupon;
+    const rank = c.rank || '';
+    const sym = COUPON_SYMS[rank] || '🎁';
+    const rcls = COUPON_RBCLS[rank] || 'rb-san';
+    const ncls = COUPON_COLORS[rank] || 'r-san';
+    const isUsed = c.status === '使用済';
+    document.getElementById('coupon-content').innerHTML = `
+      <div class="coupon-page">
+        <div class="result-badge ${rcls}" style="animation:none;opacity:1;">${sym}</div>
+        <p class="coupon-rank ${ncls}">${rank}</p>
+        <p class="coupon-prize">${c.prize}</p>
+        <p class="coupon-date">当選日時: ${c.date}</p>
+        <p class="coupon-id">ID: ${c.id}</p>
+        <div class="coupon-status ${isUsed ? 'cs-used' : 'cs-unused'}">${c.status}</div>
+        <div class="coupon-note">
+          このページをスタッフにご提示ください。<br>
+          景品の交換・返品・換金はできません。
+        </div>
+      </div>`;
+    show('sc-coupon');
+  } catch(e) {
+    hideLoading();
+    document.getElementById('coupon-content').innerHTML =
+      '<div class="coupon-page"><p style="color:var(--red);">通信エラー</p></div>';
+    show('sc-coupon');
+  }
+}
+
 // ══ INIT ══
 (async function init() {
+  // クーポンページ判定
+  const params = new URLSearchParams(location.search);
+  const couponParam = params.get('coupon');
+  if(couponParam && API_URL) {
+    document.querySelector('.stage').style.display = '';
+    await showCouponPage(couponParam);
+    return;
+  }
+
   // ローカルキャッシュから仮表示
   try {
     const c = JSON.parse(localStorage.getItem('hfh_cache'));
