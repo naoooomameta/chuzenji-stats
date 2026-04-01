@@ -127,6 +127,7 @@ function doPost(e) {
       case 'draw':   return handleDraw(data);
       case 'reset':  return handleReset(data);
       case 'config': return handleConfig(data);
+      case 'redeem': return handleRedeem(data);
       default:       return jsonOut({ok: false, error: '不明なアクション: ' + data.action});
     }
   } catch (err) {
@@ -204,6 +205,26 @@ function handleReset(data) {
   configSheet.getRange('B6').setValue(san);
 
   return jsonOut({ok: true, stock: {ichi: ichi, ni: ni, san: san}});
+}
+
+/* ── クーポン使用済にする ── */
+function handleRedeem(data) {
+  if (!data.id) return jsonOut({ok: false, error: 'クーポンIDが必要です'});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logSheet = ss.getSheetByName('ログ');
+  var lastRow = logSheet.getLastRow();
+  if (lastRow < 2) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+
+  var ids = logSheet.getRange(2, 6, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === data.id) {
+      var row = i + 2;
+      logSheet.getRange(row, 7).setValue('使用済');
+      return jsonOut({ok: true, status: '使用済'});
+    }
+  }
+  return jsonOut({ok: false, error: 'クーポンが見つかりません'});
 }
 
 /* ── 設定変更 ── */
