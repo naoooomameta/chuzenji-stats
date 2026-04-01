@@ -235,6 +235,52 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
   border-radius:7px;padding:9px 12px;border:1px solid #b0d0bc;margin-top:10px;}
 .a-info b{color:var(--green);}
 .a-note{font-size:10px;color:var(--text-dim);margin-top:10px;line-height:1.8;}
+
+/* MOBILE RESPONSIVE */
+@media screen and (max-width:480px){
+  body{align-items:flex-start;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;}
+  .stage{width:100%;min-height:100dvh;}
+  .screen.active{min-height:100dvh;}
+  .card{border-radius:0;border-left:none;border-right:none;box-shadow:0 4px 24px rgba(20,70,40,.10);}
+  .card-header{padding:.85rem 1.2rem .75rem;gap:10px;}
+  .header-fish{width:72px;}
+  .store-name{font-size:19px;letter-spacing:.15em;}
+  .store-sub{font-size:7px;}
+  .campaign-title{font-size:12px;}
+  .card-body{padding:1.1rem 1.2rem 1.3rem;}
+  .staff-note{font-size:10.5px;padding:7px 11px;}
+  .stock-badge{padding:7px 10px;gap:4px;}
+  .stock-nums{gap:8px;}
+  .stock-count{font-size:14px;}
+  .stock-total b{font-size:16px;}
+  .amount-input{font-size:22px;padding:9px 10px;}
+  .yen{font-size:18px;}
+  .prize-row{padding:6px 10px;gap:8px;}
+  .prize-sym{font-size:18px;width:24px;}
+  .prize-name{font-size:12px;}
+  .prize-left{font-size:10px;padding:3px 8px;}
+  .btn-primary{padding:14px;font-size:14px;border-radius:10px;}
+  .ready-title{font-size:19px;}
+  .btn-draw{padding:15px;font-size:17px;border-radius:10px;}
+  .r-name{font-size:24px;}
+  .result-badge{width:84px;height:84px;font-size:34px;}
+  .btn-gold{padding:12px;font-size:13px;border-radius:9px;}
+  .btn-ghost{padding:9px;font-size:11px;}
+  .soldout-icon{font-size:48px;}
+  .soldout-title{font-size:19px;}
+  #apanel{width:100vw;}
+}
+@media screen and (max-width:360px){
+  .card-header{padding:.7rem 1rem .65rem;gap:8px;}
+  .header-fish{width:60px;}
+  .store-name{font-size:16px;}
+  .campaign-title{font-size:11px;}
+  .card-body{padding:.9rem 1rem 1.1rem;}
+  .amount-input{font-size:20px;}
+  .stock-nums{gap:6px;}
+  .stock-count{font-size:13px;}
+  .prize-name{font-size:11px;}
+}
 </style>
 </head>
 <body>
