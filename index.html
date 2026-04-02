@@ -1040,10 +1040,9 @@ async function registerName() {
     const box = document.querySelector('#result-content .coupon-link-box');
     box.innerHTML = `
       <div class="coupon-link-label">クーポン発行完了</div>
-      <div class="coupon-id-display">${lastCouponId}</div>
-      <p style="font-size:15px;color:var(--text);font-weight:600;margin-bottom:6px;">${name} 様</p>
+      <p style="font-size:15px;color:var(--text);font-weight:600;margin:8px 0;">${name} 様</p>
       <div class="coupon-note" style="text-align:center;">
-        このIDとお名前をスタッフにお伝えください
+        お名前をスタッフにお伝えください
       </div>`;
     document.getElementById('result-actions').style.display = '';
     toast(name + ' 様のクーポンを発行しました ✓');
