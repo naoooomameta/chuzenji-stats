@@ -267,6 +267,51 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
   font-size:12px;cursor:pointer;font-family:'Zen Kaku Gothic New',sans-serif;letter-spacing:.06em;
   transition:background .18s;margin-top:6px;}
 .btn-copy:hover{background:#156040;}
+
+/* NAME INPUT */
+.name-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:20px;font-weight:600;text-align:center;padding:12px 14px;outline:none;
+  font-family:'Zen Kaku Gothic New',sans-serif;transition:border-color .2s,box-shadow .2s;min-width:0;}
+.name-input:focus{border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(42,163,106,.13);}
+.name-input::placeholder{color:var(--text-dim);font-weight:400;font-size:16px;}
+.coupon-id-display{font-family:'Bebas Neue',monospace;font-size:36px;color:var(--green);letter-spacing:.2em;margin:.5rem 0;}
+
+/* DASHBOARD */
+.dash-wrap{position:fixed;inset:0;z-index:7000;background:var(--bg);overflow-y:auto;display:none;}
+.dash-wrap.active{display:block;}
+.dash-inner{max-width:720px;margin:0 auto;padding:16px;}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.dash-title{font-family:'Bebas Neue',serif;font-size:20px;letter-spacing:.12em;color:var(--green);}
+.dash-close{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:13px;
+  padding:6px 14px;border-radius:8px;cursor:pointer;}
+.dash-search{display:flex;gap:8px;margin-bottom:16px;}
+.dash-search-input{flex:1;min-width:0;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-size:14px;outline:none;font-family:'Zen Kaku Gothic New',sans-serif;}
+.dash-search-input:focus{border-color:var(--green-mid);}
+.dash-search-btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px 18px;
+  font-size:13px;cursor:pointer;white-space:nowrap;}
+.dash-redeem{display:flex;gap:8px;margin-bottom:16px;padding:12px;background:var(--gold-bg);
+  border:1px solid #e0c880;border-radius:10px;}
+.dash-redeem-input{flex:1;min-width:0;background:#fff;border:1.5px solid #e0c880;border-radius:8px;
+  padding:10px 12px;font-size:16px;font-weight:700;text-align:center;outline:none;
+  font-family:'Bebas Neue',monospace;letter-spacing:.15em;text-transform:uppercase;}
+.dash-redeem-btn{background:var(--gold-mid);color:#fff;border:none;border-radius:8px;padding:10px 18px;
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.dash-table{width:100%;border-collapse:collapse;font-size:12px;}
+.dash-table th{background:var(--green);color:#fff;padding:8px 6px;text-align:left;
+  font-size:10px;letter-spacing:.06em;font-weight:500;position:sticky;top:0;}
+.dash-table td{padding:7px 6px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.dash-table tr:hover td{background:var(--green-light);}
+.dash-status{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;}
+.ds-unused{background:var(--green-light);color:var(--green);}
+.ds-used{background:#f0f0f0;color:#aaa;}
+.dash-id{font-family:'Bebas Neue',monospace;font-size:14px;letter-spacing:.1em;color:var(--text);}
+.dash-empty{text-align:center;padding:2rem;color:var(--text-dim);font-size:13px;}
+.dash-stats{display:flex;gap:8px;margin-bottom:16px;}
+.dash-stat{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px;text-align:center;}
+.dash-stat-num{font-size:22px;font-weight:700;color:var(--green);}
+.dash-stat-label{font-size:9px;color:var(--text-dim);letter-spacing:.06em;}
 .share-buttons{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px;}
 .btn-share{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;
   font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:'Zen Kaku Gothic New',sans-serif;
@@ -631,8 +676,44 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
     <button class="btn-a" onclick="changeApiUrl()">URL を変更</button>
   </div>
 
+  <div class="a-sec">
+    <div class="a-ttl">管理ダッシュボード</div>
+    <button class="btn-a" onclick="closeAdmin();openDash();" style="background:var(--gold-mid);">📋 クーポン管理ダッシュボードを開く</button>
+  </div>
+
   <div class="a-info"><b>URLに ?admin を付けると</b>このパネルが開きます。<br>在庫はGoogleスプレッドシートで一元管理されます。複数端末で同じ在庫を共有できます。</div>
   <p class="a-note">景品表示法：最高景品額は購入金額の20倍以内（最大10万円）を守ってください。</p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash-wrap" class="dash-wrap">
+  <div class="dash-inner">
+    <div class="dash-header">
+      <span class="dash-title">COUPON DASHBOARD</span>
+      <button class="dash-close" onclick="closeDash()">✕ 閉じる</button>
+    </div>
+
+    <div class="dash-redeem">
+      <input class="dash-redeem-input" id="redeem-id" type="text" placeholder="クーポンID" maxlength="6">
+      <button class="dash-redeem-btn" onclick="dashRedeem()">使用済にする</button>
+    </div>
+    <p id="redeem-result" style="font-size:12px;margin:-8px 0 12px;text-align:center;"></p>
+
+    <div class="dash-stats" id="dash-stats"></div>
+
+    <div class="dash-search">
+      <input class="dash-search-input" id="dash-q" type="text" placeholder="名前・IDで検索...">
+      <button class="dash-search-btn" onclick="dashSearch()">検索</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="dash-table">
+        <thead><tr><th>ID</th><th>お名前</th><th>等</th><th>景品</th><th>日時</th><th>ステータス</th></tr></thead>
+        <tbody id="dash-body"></tbody>
+      </table>
+    </div>
+    <p id="dash-empty" class="dash-empty" style="display:none;">データがありません</p>
+  </div>
 </div>
 
 <script>
@@ -922,37 +1003,17 @@ function showAura(key, cb) {
 
 // ══ RESULT ══
 let lastCouponId = '';
+let lastKey = '';
 function showResult(key, couponId) {
   show('sc-result');
   lastCouponId = couponId || '';
+  lastKey = key;
   const remaining = drawsTotal - drawsDone;
   const hasStock = totalStock() > 0;
   const note = (NOTES[key] || '').replace(/\n/g, '<br>');
   const extraBtn = (remaining > 0 && hasStock)
     ? `<button class="btn-gold" onclick="nextDraw()">🎯 もう1回くじを引く（残り${remaining}回）</button>`
     : '';
-
-  const couponUrl = couponId ? buildCouponUrl(couponId, key) : '';
-  const shareText = couponId ? `🎣 ${RANKS[key]} ${NAMES[key]} が当たりました！\nクーポンはこちら👇` : '';
-  const lineShareUrl = couponId ? `https://line.me/R/share?text=${encodeURIComponent(shareText + '\n' + couponUrl)}` : '';
-  const couponLink = couponId ? `
-      <div class="coupon-link-box">
-        <div class="coupon-link-label">お客様にクーポンを渡す</div>
-        <div class="share-buttons">
-          <button class="btn-share btn-line" onclick="window.open('${lineShareUrl}','_blank')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
-            LINEで送る
-          </button>
-          <button class="btn-share btn-native" onclick="nativeShare('${couponUrl}', \`${shareText}\`)" id="btn-native-share" style="display:none;">
-            共有する
-          </button>
-          <button class="btn-copy" onclick="copyCouponLink('${couponUrl}')">URLをコピー</button>
-        </div>
-        <div class="qr-area">
-          <div class="qr-label">QRコードでお渡し</div>
-          <div id="qr-result"></div>
-        </div>
-      </div>` : '';
 
   document.getElementById('result-content').innerHTML = `
     <div class="result-body">
@@ -962,12 +1023,67 @@ function showResult(key, couponId) {
       <p class="r-name ${NCLS[key]}">${RANKS[key].replace(' ','')}</p>
       <p class="r-prize-name">${NAMES[key]}</p>
       <p class="r-how">${note}</p>
-      ${couponLink}
-      <div class="action-col">
+      ${couponId ? `
+      <div class="coupon-link-box">
+        <div class="coupon-link-label">クーポンID</div>
+        <div class="coupon-id-display">${couponId}</div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">お名前を入力してクーポンを受け取ってください</p>
+        <input class="name-input" id="name-input" type="text" placeholder="カタカナでお名前" maxlength="20">
+        <p id="name-err" style="font-size:11px;color:var(--red);margin:4px 0;min-height:16px;"></p>
+        <button class="btn-primary" onclick="registerName()" style="margin-top:4px;">クーポンを受け取る</button>
+      </div>` : ''}
+      <div class="action-col" id="result-actions" ${couponId ? 'style="display:none;"' : ''}>
         ${extraBtn}
         <button class="btn-ghost" onclick="backToStaff()">↩ スタッフ画面に戻る</button>
       </div>
     </div>`;
+}
+
+async function registerName() {
+  const name = document.getElementById('name-input').value.trim();
+  const err = document.getElementById('name-err');
+  if (!name) { err.textContent = 'お名前を入力してください'; return; }
+  if (!/^[ァ-ヶー\s]+$/.test(name)) { err.textContent = 'カタカナで入力してください'; return; }
+  err.textContent = '';
+
+  const btn = document.querySelector('#result-content .btn-primary');
+  btn.disabled = true; btn.textContent = '登録中...';
+
+  try {
+    const res = await apiPost({action:'register', id: lastCouponId, name: name});
+    if (!res.ok) throw new Error(res.error);
+
+    // 名前登録完了 → クーポン共有画面に切り替え
+    const couponUrl = buildCouponUrl(lastCouponId, lastKey);
+    const shareText = `🎣 ${RANKS[lastKey]} ${NAMES[lastKey]} が当たりました！\nクーポンはこちら👇`;
+    const lineShareUrl = `https://line.me/R/share?text=${encodeURIComponent(shareText + '\n' + couponUrl)}`;
+
+    const box = document.querySelector('#result-content .coupon-link-box');
+    box.innerHTML = `
+      <div class="coupon-link-label">クーポン発行完了</div>
+      <div class="coupon-id-display">${lastCouponId}</div>
+      <p style="font-size:13px;color:var(--text);font-weight:600;margin-bottom:8px;">${name} 様</p>
+      <div class="share-buttons">
+        <button class="btn-share btn-line" onclick="window.open('${lineShareUrl}','_blank')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+          LINEで送る
+        </button>
+        <button class="btn-share btn-native" onclick="nativeShare('${couponUrl}','${shareText.replace(/'/g,"\\'")}')" ${navigator.share ? '' : 'style="display:none;"'}>
+          共有する
+        </button>
+        <button class="btn-copy" onclick="copyCouponLink('${couponUrl}')">URLをコピー</button>
+      </div>
+      <div class="qr-area">
+        <div class="qr-label">QRコードでお渡し</div>
+        <div id="qr-result"></div>
+      </div>`;
+    generateQR(couponUrl);
+    document.getElementById('result-actions').style.display = '';
+    toast(name + ' 様のクーポンを発行しました ✓');
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'クーポンを受け取る';
+    err.textContent = 'エラー: ' + e.message;
+  }
 }
 function copyCouponLink(url) {
   navigator.clipboard.writeText(url).then(() => toast('URLをコピーしました ✓'));
@@ -1135,31 +1251,111 @@ function showCouponPage(params) {
         このページをスタッフにご提示ください。<br>
         景品の交換・返品・換金はできません。
       </div>
-      <button class="btn-primary" id="btn-redeem" onclick="redeemCoupon('${couponId}')" style="margin-top:1rem;">
-        使用済にする
-      </button>
-      <p id="redeem-msg" style="font-size:10px;color:var(--text-dim);margin-top:.4rem;"></p>
     </div>`;
   show('sc-coupon');
 }
 
-async function redeemCoupon(couponId) {
-  const btn = document.getElementById('btn-redeem');
-  const msg = document.getElementById('redeem-msg');
-  if(!API_URL) { msg.textContent = '※ スタッフ端末から操作してください'; return; }
-  btn.disabled = true; btn.textContent = '処理中...';
+// ══ DASHBOARD ══
+function openDash() {
+  document.getElementById('dash-wrap').classList.add('active');
+  loadDashboard();
+}
+function closeDash() {
+  document.getElementById('dash-wrap').classList.remove('active');
+}
+
+async function loadDashboard() {
+  const body = document.getElementById('dash-body');
+  const empty = document.getElementById('dash-empty');
+  body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text-dim);">読み込み中...</td></tr>';
   try {
-    const res = await apiPost({action:'redeem', id: couponId});
-    if(!res.ok) throw new Error(res.error);
-    btn.textContent = '✓ 使用済';
-    btn.style.background = '#9ab8a8';
-    msg.textContent = 'スプレッドシートを更新しました';
+    const res = await fetch(API_URL + '?action=list', {redirect:'follow'});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    renderDashTable(data.coupons);
   } catch(e) {
-    btn.disabled = false; btn.textContent = '使用済にする';
+    body.innerHTML = '';
+    empty.textContent = '読み込みエラー: ' + e.message;
+    empty.style.display = 'block';
+  }
+}
+
+function renderDashTable(coupons) {
+  const body = document.getElementById('dash-body');
+  const empty = document.getElementById('dash-empty');
+  const stats = document.getElementById('dash-stats');
+
+  if (!coupons || coupons.length === 0) {
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    empty.textContent = 'データがありません';
+    stats.innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const total = coupons.length;
+  const used = coupons.filter(c => c.status === '使用済').length;
+  const unused = total - used;
+  stats.innerHTML = `
+    <div class="dash-stat"><div class="dash-stat-num">${total}</div><div class="dash-stat-label">発行数</div></div>
+    <div class="dash-stat"><div class="dash-stat-num" style="color:var(--gold);">${unused}</div><div class="dash-stat-label">未使用</div></div>
+    <div class="dash-stat"><div class="dash-stat-num" style="color:var(--text-dim);">${used}</div><div class="dash-stat-label">使用済</div></div>`;
+
+  body.innerHTML = coupons.map(c => `
+    <tr>
+      <td><span class="dash-id">${c.id}</span></td>
+      <td>${c.name || '<span style="color:var(--text-dim);">—</span>'}</td>
+      <td>${c.rank}</td>
+      <td>${c.prize}</td>
+      <td style="font-size:11px;color:var(--text-dim);">${c.date}</td>
+      <td><span class="dash-status ${c.status==='使用済'?'ds-used':'ds-unused'}">${c.status}</span></td>
+    </tr>`).join('');
+}
+
+async function dashSearch() {
+  const q = document.getElementById('dash-q').value.trim();
+  if (!q) { loadDashboard(); return; }
+  const body = document.getElementById('dash-body');
+  body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:1rem;">検索中...</td></tr>';
+  try {
+    const res = await fetch(API_URL + '?action=search&q=' + encodeURIComponent(q), {redirect:'follow'});
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    renderDashTable(data.results);
+  } catch(e) {
+    body.innerHTML = '';
+    document.getElementById('dash-empty').textContent = '検索エラー: ' + e.message;
+    document.getElementById('dash-empty').style.display = 'block';
+  }
+}
+
+async function dashRedeem() {
+  const input = document.getElementById('redeem-id');
+  const msg = document.getElementById('redeem-result');
+  const id = input.value.trim().toUpperCase();
+  if (!id) { msg.textContent = 'IDを入力してください'; msg.style.color = 'var(--red)'; return; }
+  msg.textContent = '処理中...'; msg.style.color = 'var(--text-dim)';
+  try {
+    const res = await apiPost({action:'redeem', id: id});
+    if (!res.ok) throw new Error(res.error);
+    msg.textContent = '✓ ' + id + ' を使用済にしました';
+    msg.style.color = 'var(--green)';
+    input.value = '';
+    loadDashboard();
+  } catch(e) {
     msg.textContent = 'エラー: ' + e.message;
     msg.style.color = 'var(--red)';
   }
 }
+
+// ダッシュボード検索のEnterキー対応
+document.getElementById('dash-q').addEventListener('keydown', function(e) {
+  if(e.key === 'Enter') dashSearch();
+});
+document.getElementById('redeem-id').addEventListener('keydown', function(e) {
+  if(e.key === 'Enter') dashRedeem();
+});
 
 // ══ INIT ══
 (async function init() {
@@ -1184,6 +1380,11 @@ async function redeemCoupon(couponId) {
   await fetchStatus();
   hideLoading();
   initAdmin();
+
+  // ?dashboard でダッシュボードを直接開く
+  if(location.search.includes('dashboard')) {
+    openDash();
+  }
 })();
 </script>
 </body>
