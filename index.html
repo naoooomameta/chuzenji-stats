@@ -291,12 +291,12 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 .dash-search-btn{background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px 18px;
   font-size:13px;cursor:pointer;white-space:nowrap;}
 .dash-redeem{display:flex;gap:8px;margin-bottom:16px;padding:12px;background:var(--gold-bg);
-  border:1px solid #e0c880;border-radius:10px;}
-.dash-redeem-input{flex:1;min-width:0;background:#fff;border:1.5px solid #e0c880;border-radius:8px;
-  padding:10px 12px;font-size:16px;font-weight:700;text-align:center;outline:none;
-  font-family:'Bebas Neue',monospace;letter-spacing:.15em;text-transform:uppercase;}
+  border:1px solid #e0c880;border-radius:10px;align-items:center;justify-content:space-between;}
 .dash-redeem-btn{background:var(--gold-mid);color:#fff;border:none;border-radius:8px;padding:10px 18px;
   font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.dash-redeem-btn:disabled{background:#ccc;cursor:not-allowed;}
+.dash-redeem-count{font-size:13px;color:var(--gold);font-weight:600;}
+.dash-cb{width:18px;height:18px;accent-color:var(--green);cursor:pointer;}
 .dash-table{width:100%;border-collapse:collapse;font-size:12px;}
 .dash-table th{background:var(--green);color:#fff;padding:8px 6px;text-align:left;
   font-size:10px;letter-spacing:.06em;font-weight:500;position:sticky;top:0;}
@@ -693,9 +693,9 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
       <button class="dash-close" onclick="closeDash()">✕ 閉じる</button>
     </div>
 
-    <div class="dash-redeem">
-      <input class="dash-redeem-input" id="redeem-id" type="text" placeholder="クーポンID" maxlength="6">
-      <button class="dash-redeem-btn" onclick="dashRedeem()">使用済にする</button>
+    <div class="dash-redeem" id="dash-redeem-bar">
+      <span class="dash-redeem-count" id="redeem-count">0 件選択中</span>
+      <button class="dash-redeem-btn" id="redeem-btn" onclick="dashRedeemChecked()" disabled>選択したクーポンを使用済にする</button>
     </div>
     <p id="redeem-result" style="font-size:12px;margin:-8px 0 12px;text-align:center;"></p>
 
@@ -708,7 +708,7 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
 
     <div style="overflow-x:auto;">
       <table class="dash-table">
-        <thead><tr><th>ID</th><th>お名前</th><th>等</th><th>景品</th><th>日時</th><th>ステータス</th></tr></thead>
+        <thead><tr><th style="width:30px;"><input type="checkbox" class="dash-cb" id="dash-check-all" onchange="dashToggleAll(this)"></th><th>ID</th><th>お名前</th><th>等</th><th>景品</th><th>日時</th><th>ステータス</th></tr></thead>
         <tbody id="dash-body"></tbody>
       </table>
     </div>
@@ -1302,15 +1302,51 @@ function renderDashTable(coupons) {
     <div class="dash-stat"><div class="dash-stat-num" style="color:var(--gold);">${unused}</div><div class="dash-stat-label">未使用</div></div>
     <div class="dash-stat"><div class="dash-stat-num" style="color:var(--text-dim);">${used}</div><div class="dash-stat-label">使用済</div></div>`;
 
-  body.innerHTML = coupons.map(c => `
-    <tr>
+  body.innerHTML = coupons.map(c => {
+    const isUsed = c.status === '使用済';
+    return `<tr>
+      <td><input type="checkbox" class="dash-cb dash-row-cb" data-id="${c.id}" onchange="dashUpdateCount()" ${isUsed ? 'disabled' : ''}></td>
       <td><span class="dash-id">${c.id}</span></td>
       <td>${c.name || '<span style="color:var(--text-dim);">—</span>'}</td>
       <td>${c.rank}</td>
       <td>${c.prize}</td>
       <td style="font-size:11px;color:var(--text-dim);">${c.date}</td>
-      <td><span class="dash-status ${c.status==='使用済'?'ds-used':'ds-unused'}">${c.status}</span></td>
-    </tr>`).join('');
+      <td><span class="dash-status ${isUsed?'ds-used':'ds-unused'}">${c.status}</span></td>
+    </tr>`;
+  }).join('');
+  dashUpdateCount();
+  document.getElementById('dash-check-all').checked = false;
+}
+
+function dashToggleAll(el) {
+  document.querySelectorAll('.dash-row-cb:not(:disabled)').forEach(cb => { cb.checked = el.checked; });
+  dashUpdateCount();
+}
+function dashUpdateCount() {
+  const checked = document.querySelectorAll('.dash-row-cb:checked');
+  const n = checked.length;
+  document.getElementById('redeem-count').textContent = n + ' 件選択中';
+  document.getElementById('redeem-btn').disabled = n === 0;
+}
+async function dashRedeemChecked() {
+  const checked = document.querySelectorAll('.dash-row-cb:checked');
+  if (checked.length === 0) return;
+  const ids = Array.from(checked).map(cb => cb.dataset.id);
+  const msg = document.getElementById('redeem-result');
+  const btn = document.getElementById('redeem-btn');
+  btn.disabled = true; btn.textContent = '処理中...';
+  msg.textContent = ''; msg.style.color = 'var(--text-dim)';
+  let ok = 0, fail = 0;
+  for (const id of ids) {
+    try {
+      const res = await apiPost({action:'redeem', id: id});
+      if (res.ok) ok++; else fail++;
+    } catch(e) { fail++; }
+  }
+  msg.textContent = `✓ ${ok}件を使用済にしました` + (fail ? ` （${fail}件エラー）` : '');
+  msg.style.color = fail ? 'var(--red)' : 'var(--green)';
+  btn.textContent = '選択したクーポンを使用済にする';
+  loadDashboard();
 }
 
 async function dashSearch() {
@@ -1330,31 +1366,9 @@ async function dashSearch() {
   }
 }
 
-async function dashRedeem() {
-  const input = document.getElementById('redeem-id');
-  const msg = document.getElementById('redeem-result');
-  const id = input.value.trim().toUpperCase();
-  if (!id) { msg.textContent = 'IDを入力してください'; msg.style.color = 'var(--red)'; return; }
-  msg.textContent = '処理中...'; msg.style.color = 'var(--text-dim)';
-  try {
-    const res = await apiPost({action:'redeem', id: id});
-    if (!res.ok) throw new Error(res.error);
-    msg.textContent = '✓ ' + id + ' を使用済にしました';
-    msg.style.color = 'var(--green)';
-    input.value = '';
-    loadDashboard();
-  } catch(e) {
-    msg.textContent = 'エラー: ' + e.message;
-    msg.style.color = 'var(--red)';
-  }
-}
-
 // ダッシュボード検索のEnterキー対応
 document.getElementById('dash-q').addEventListener('keydown', function(e) {
   if(e.key === 'Enter') dashSearch();
-});
-document.getElementById('redeem-id').addEventListener('keydown', function(e) {
-  if(e.key === 'Enter') dashRedeem();
 });
 
 // ══ INIT ══
