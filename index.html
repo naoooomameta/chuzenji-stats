@@ -893,14 +893,12 @@ function toast(msg, d=2600) {
 let currentAmount = 0;
 async function issueKuji() {
   const btn = document.getElementById('btn-issue');
-  btn.disabled = true; btn.textContent = '在庫を確認中...';
+  btn.disabled = true; btn.textContent = 'くじを発行する';
   try {
-    // サーバーから最新在庫を取得
-    await fetchStatus();
     if(totalStock() === 0) { show('sc-soldout'); return; }
     const v = parseInt(document.getElementById('amount').value) || 0;
     const err = document.getElementById('amt-err');
-    if(v < minAmount) { err.textContent = minAmount.toLocaleString() + '円以上のお買い上げが対象です'; updateStockUI(); return; }
+    if(v < minAmount) { err.textContent = minAmount.toLocaleString() + '円以上のお買い上げが対象です'; return; }
     err.textContent = '';
     currentAmount = v;
     drawsTotal = (v >= bonusAmount && totalStock() >= 2) ? 2 : 1;
@@ -942,7 +940,7 @@ async function startDraw() {
     buildSlot(res.key, res.couponId);
   } catch(e) {
     toast('エラー: ' + e.message, 3500);
-    await fetchStatus();
+    fetchStatus(); // バックグラウンド更新
   } finally {
     if(btn) { btn.disabled = false; btn.textContent = '▶ くじを引く'; }
   }
@@ -1057,12 +1055,13 @@ function nextDraw() {
   show('sc-ready');
   document.getElementById('draws-left').style.display = 'none';
 }
-async function backToStaff() {
+function backToStaff() {
   document.getElementById('amount').value = '';
   document.getElementById('amt-err').textContent = '';
   document.getElementById('extra-note').style.display = 'none';
   drawsTotal = 1; drawsDone = 0;
-  await fetchStatus();
+  // バックグラウンドで在庫更新（待たない）
+  fetchStatus();
   if(totalStock() === 0) { show('sc-soldout'); return; }
   show('sc-staff');
 }
