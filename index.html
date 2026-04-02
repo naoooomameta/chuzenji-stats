@@ -483,10 +483,10 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
           <span class="stock-label">残り在庫</span>
           <div class="stock-nums">
             <div class="stock-item"><div class="stock-rank">1等</div><div class="stock-count sc-gold" id="s-ichi">6</div></div>
-            <div class="stock-item"><div class="stock-rank">2等</div><div class="stock-count sc-silver" id="s-ni">3</div></div>
-            <div class="stock-item"><div class="stock-rank">3等</div><div class="stock-count sc-bronze" id="s-san">50</div></div>
+            <div class="stock-item"><div class="stock-rank">2等</div><div class="stock-count sc-silver" id="s-ni">12</div></div>
+            <div class="stock-item"><div class="stock-rank">3等</div><div class="stock-count sc-bronze" id="s-san">40</div></div>
           </div>
-          <div class="stock-total">合計<br><b id="s-total">59</b>枚</div>
+          <div class="stock-total">合計<br><b id="s-total">58</b>枚</div>
         </div>
 
         <p class="field-label">お会計金額を入力</p>
@@ -504,13 +504,13 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
           </div>
           <div class="prize-row" id="pr-ni">
             <span class="prize-sym">🥈</span>
-            <div class="prize-info"><div class="prize-rank">2 等</div><div class="prize-name">1,000円OFFクーポン</div></div>
-            <span class="prize-left pl-silver" id="pl-ni">残り 3 枚</span>
+            <div class="prize-info"><div class="prize-rank">2 等</div><div class="prize-name">500円OFFクーポン</div></div>
+            <span class="prize-left pl-silver" id="pl-ni">残り 12 枚</span>
           </div>
           <div class="prize-row" id="pr-san">
             <span class="prize-sym">🥉</span>
             <div class="prize-info"><div class="prize-rank">3 等</div><div class="prize-name">100円OFFクーポン</div></div>
-            <span class="prize-left pl-bronze" id="pl-san">残り 50 枚</span>
+            <span class="prize-left pl-bronze" id="pl-san">残り 40 枚</span>
           </div>
         </div>
 
@@ -631,18 +631,18 @@ body{background:var(--bg);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothi
     <div class="a-row"><span class="a-row-label">🥇 1等 マグカップ</span><span class="a-stock-display sc-gold" id="ad-ichi">6</span></div>
     <div class="a-row" style="margin-bottom:0;"><div class="a-bar"><div class="a-bar-fill" id="ab-ichi" style="background:var(--gold-light);width:100%;"></div></div></div>
     <div style="height:10px;"></div>
-    <div class="a-row"><span class="a-row-label">🥈 2等 1,000円OFF</span><span class="a-stock-display sc-silver" id="ad-ni">3</span></div>
+    <div class="a-row"><span class="a-row-label">🥈 2等 500円OFF</span><span class="a-stock-display sc-silver" id="ad-ni">12</span></div>
     <div class="a-row" style="margin-bottom:0;"><div class="a-bar"><div class="a-bar-fill" id="ab-ni" style="background:#90b0c8;width:100%;"></div></div></div>
     <div style="height:10px;"></div>
-    <div class="a-row"><span class="a-row-label">🥉 3等 100円OFF</span><span class="a-stock-display sc-bronze" id="ad-san">50</span></div>
+    <div class="a-row"><span class="a-row-label">🥉 3等 100円OFF</span><span class="a-stock-display sc-bronze" id="ad-san">40</span></div>
     <div class="a-row" style="margin-bottom:0;"><div class="a-bar"><div class="a-bar-fill" id="ab-san" style="background:#c09060;width:100%;"></div></div></div>
   </div>
 
   <div class="a-sec">
     <div class="a-ttl">在庫を補充・リセット</div>
     <div class="a-row"><span class="a-row-label">🥇 1等 補充数</span><input class="a-num" id="ar-ichi" type="number" value="6" min="0"></div>
-    <div class="a-row"><span class="a-row-label">🥈 2等 補充数</span><input class="a-num" id="ar-ni" type="number" value="3" min="0"></div>
-    <div class="a-row"><span class="a-row-label">🥉 3等 補充数</span><input class="a-num" id="ar-san" type="number" value="50" min="0"></div>
+    <div class="a-row"><span class="a-row-label">🥈 2等 補充数</span><input class="a-num" id="ar-ni" type="number" value="12" min="0"></div>
+    <div class="a-row"><span class="a-row-label">🥉 3等 補充数</span><input class="a-num" id="ar-san" type="number" value="40" min="0"></div>
     <button class="btn-a" onclick="resetStock()">在庫をリセット・補充</button>
   </div>
 
@@ -722,7 +722,7 @@ async function apiPost(data) {
 }
 
 // ══ STATE ══
-let INIT_STOCK = {ichi:6, ni:3, san:50};
+let INIT_STOCK = {ichi:6, ni:12, san:40};
 let stock = {...INIT_STOCK};
 let minAmount = 3000;
 let bonusAmount = 5000;
@@ -730,7 +730,7 @@ let drawsTotal = 1, drawsDone = 0;
 
 const SYMS  = {ichi:'🥇', ni:'🥈', san:'🥉'};
 const RANKS = {ichi:'1 等', ni:'2 等', san:'3 等'};
-const NAMES = {ichi:'オリジナルマグカップ', ni:'1,000円OFFクーポン', san:'100円OFFクーポン'};
+const NAMES = {ichi:'オリジナルマグカップ', ni:'500円OFFクーポン', san:'100円OFFクーポン'};
 const NOTES = {
   ichi:'レジにてスタッフにお申し付けください\n（数量限定のためお早めに！）',
   ni:'次回お会計時にご利用ください\n（有効期限：発行日より90日間）',
