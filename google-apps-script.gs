@@ -18,41 +18,38 @@
 var PRIZE_NAMES = {ichi:'オリジナルマグカップ', ni:'500円OFFクーポン', san:'100円OFFクーポン'};
 var PRIZE_RANKS = {ichi:'1等', ni:'2等', san:'3等'};
 
-/* ── 6桁の簡易クーポンID生成 ── */
 function generateCouponId() {
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 紛らわしい文字(I,O,0,1)を除外
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   var id = '';
-  for (var i = 0; i < 6; i++) {
-    id += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
+  for (var i = 0; i < 6; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
   return id;
 }
 
-/* ── GET ── */
+/* ══ GET ══ */
 function doGet(e) {
   try {
     var action = (e && e.parameter && e.parameter.action) || 'status';
+    if (action === 'coupon') return handleCouponLookup(e.parameter.id);
+    if (action === 'list')   return handleList();
+    if (action === 'search') return handleSearch(e.parameter.q);
 
-    if (action === 'coupon')   return handleCouponLookup(e.parameter.id);
-    if (action === 'list')     return handleList();
-    if (action === 'search')   return handleSearch(e.parameter.q);
-
+    // バッチ読み取り（個別getValue()の代わりに一括取得）
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var stockSheet  = ss.getSheetByName('在庫');
-    var configSheet = ss.getSheetByName('設定');
+    var stockVals  = ss.getSheetByName('在庫').getRange('B1:B3').getValues();
+    var configVals = ss.getSheetByName('設定').getRange('B1:B6').getValues();
 
     var stock = {
-      ichi: Number(stockSheet.getRange('B1').getValue()) || 0,
-      ni:   Number(stockSheet.getRange('B2').getValue()) || 0,
-      san:  Number(stockSheet.getRange('B3').getValue()) || 0
+      ichi: Number(stockVals[0][0]) || 0,
+      ni:   Number(stockVals[1][0]) || 0,
+      san:  Number(stockVals[2][0]) || 0
     };
     var config = {
-      minAmount:   Number(configSheet.getRange('B1').getValue()) || 3000,
-      bonusAmount: Number(configSheet.getRange('B2').getValue()) || 5000,
+      minAmount:   Number(configVals[0][0]) || 3000,
+      bonusAmount: Number(configVals[1][0]) || 5000,
       initStock: {
-        ichi: Number(configSheet.getRange('B4').getValue()) || 6,
-        ni:   Number(configSheet.getRange('B5').getValue()) || 3,
-        san:  Number(configSheet.getRange('B6').getValue()) || 50
+        ichi: Number(configVals[3][0]) || 6,
+        ni:   Number(configVals[4][0]) || 3,
+        san:  Number(configVals[5][0]) || 50
       }
     };
 
@@ -68,14 +65,12 @@ function doGet(e) {
         }
       }
     }
-
     return jsonOut({ok: true, stock: stock, config: config, terms: terms});
   } catch (err) {
     return jsonOut({ok: false, error: err.message});
   }
 }
 
-/* ── クーポン照会 ── */
 function handleCouponLookup(id) {
   if (!id) return jsonOut({ok: false, error: 'IDが指定されていません'});
   var row = findCouponRow(id.toUpperCase());
@@ -83,31 +78,21 @@ function handleCouponLookup(id) {
   return jsonOut({ok: true, coupon: rowToCoupon(row)});
 }
 
-/* ── 一覧取得（管理ダッシュボード用） ── */
 function handleList() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var logSheet = ss.getSheetByName('ログ');
   var lastRow = logSheet.getLastRow();
   if (lastRow < 2) return jsonOut({ok: true, coupons: []});
-
+  // 全行を一括取得
   var data = logSheet.getRange(2, 1, lastRow - 1, 8).getValues();
   var coupons = [];
   for (var i = data.length - 1; i >= 0; i--) {
-    if (!data[i][5]) continue; // クーポンIDがない行はスキップ
-    coupons.push({
-      date: data[i][0] ? Utilities.formatDate(new Date(data[i][0]), 'Asia/Tokyo', 'MM/dd HH:mm') : '',
-      amount: data[i][1],
-      rank: data[i][2],
-      prize: data[i][3],
-      id: String(data[i][5]),
-      status: data[i][6] || '未使用',
-      name: data[i][7] || ''
-    });
+    if (!data[i][5]) continue;
+    coupons.push(formatLogRow(data[i]));
   }
   return jsonOut({ok: true, coupons: coupons});
 }
 
-/* ── 検索 ── */
 function handleSearch(q) {
   if (!q) return jsonOut({ok: false, error: '検索キーワードを入力してください'});
   q = q.toUpperCase();
@@ -115,31 +100,20 @@ function handleSearch(q) {
   var logSheet = ss.getSheetByName('ログ');
   var lastRow = logSheet.getLastRow();
   if (lastRow < 2) return jsonOut({ok: true, results: []});
-
   var data = logSheet.getRange(2, 1, lastRow - 1, 8).getValues();
   var results = [];
   for (var i = data.length - 1; i >= 0; i--) {
-    var id = String(data[i][5]).toUpperCase();
-    var name = String(data[i][7] || '').toUpperCase();
-    if (id.indexOf(q) >= 0 || name.indexOf(q) >= 0) {
-      results.push({
-        date: data[i][0] ? Utilities.formatDate(new Date(data[i][0]), 'Asia/Tokyo', 'MM/dd HH:mm') : '',
-        amount: data[i][1],
-        rank: data[i][2],
-        prize: data[i][3],
-        id: String(data[i][5]),
-        status: data[i][6] || '未使用',
-        name: data[i][7] || ''
-      });
+    if (String(data[i][5]).toUpperCase().indexOf(q) >= 0 || String(data[i][7] || '').toUpperCase().indexOf(q) >= 0) {
+      results.push(formatLogRow(data[i]));
     }
   }
   return jsonOut({ok: true, results: results});
 }
 
-/* ── POST ── */
+/* ══ POST ══ */
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(15000); } catch (err) {
+  try { lock.waitLock(10000); } catch (err) {
     return jsonOut({ok: false, error: 'サーバーが混み合っています'});
   }
   try {
@@ -159,18 +133,14 @@ function doPost(e) {
   }
 }
 
-/* ── 抽選 ── */
 function handleDraw(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var stockSheet = ss.getSheetByName('在庫');
   var logSheet   = ss.getSheetByName('ログ');
 
-  var stock = {
-    ichi: Number(stockSheet.getRange('B1').getValue()) || 0,
-    ni:   Number(stockSheet.getRange('B2').getValue()) || 0,
-    san:  Number(stockSheet.getRange('B3').getValue()) || 0
-  };
-
+  // バッチ読み取り
+  var vals = stockSheet.getRange('B1:B3').getValues();
+  var stock = { ichi: Number(vals[0][0])||0, ni: Number(vals[1][0])||0, san: Number(vals[2][0])||0 };
   var total = stock.ichi + stock.ni + stock.san;
   if (total === 0) return jsonOut({ok: false, error: '在庫なし', soldout: true});
 
@@ -182,94 +152,65 @@ function handleDraw(data) {
   var key = pool[Math.floor(Math.random() * pool.length)];
   stock[key]--;
 
-  stockSheet.getRange('B1').setValue(stock.ichi);
-  stockSheet.getRange('B2').setValue(stock.ni);
-  stockSheet.getRange('B3').setValue(stock.san);
+  // バッチ書き込み
+  stockSheet.getRange('B1:B3').setValues([[stock.ichi],[stock.ni],[stock.san]]);
 
-  // ID重複チェック付きで生成
   var couponId = generateCouponId();
-
-  // ログ記録（H列: 名前）
-  logSheet.appendRow([
-    new Date(),
-    data.amount || 0,
-    PRIZE_RANKS[key],
-    PRIZE_NAMES[key],
-    stock.ichi + stock.ni + stock.san,
-    couponId,
-    '未使用',
-    ''  // 名前（後から登録）
-  ]);
+  logSheet.appendRow([new Date(), data.amount||0, PRIZE_RANKS[key], PRIZE_NAMES[key],
+    stock.ichi+stock.ni+stock.san, couponId, '未使用', '']);
 
   return jsonOut({ok: true, key: key, stock: stock, couponId: couponId});
 }
 
-/* ── 名前登録 ── */
 function handleRegister(data) {
   if (!data.id || !data.name) return jsonOut({ok: false, error: 'IDと名前が必要です'});
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var logSheet = ss.getSheetByName('ログ');
-  var lastRow = logSheet.getLastRow();
-  if (lastRow < 2) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
-
-  var ids = logSheet.getRange(2, 6, lastRow - 1, 1).getValues();
-  for (var i = 0; i < ids.length; i++) {
-    if (String(ids[i][0]).toUpperCase() === data.id.toUpperCase()) {
-      logSheet.getRange(i + 2, 8).setValue(data.name);
-      return jsonOut({ok: true});
-    }
-  }
-  return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+  var row = findCouponRowIndex(data.id.toUpperCase());
+  if (row < 0) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ログ').getRange(row + 2, 8).setValue(data.name);
+  return jsonOut({ok: true});
 }
 
-/* ── 使用済処理 ── */
 function handleRedeem(data) {
   if (!data.id) return jsonOut({ok: false, error: 'IDが必要です'});
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var logSheet = ss.getSheetByName('ログ');
-  var lastRow = logSheet.getLastRow();
-  if (lastRow < 2) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
-
-  var ids = logSheet.getRange(2, 6, lastRow - 1, 1).getValues();
-  for (var i = 0; i < ids.length; i++) {
-    if (String(ids[i][0]).toUpperCase() === data.id.toUpperCase()) {
-      var current = logSheet.getRange(i + 2, 7).getValue();
-      if (current === '使用済') return jsonOut({ok: false, error: 'このクーポンは使用済です'});
-      logSheet.getRange(i + 2, 7).setValue('使用済');
-      return jsonOut({ok: true, status: '使用済'});
-    }
-  }
-  return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+  var idx = findCouponRowIndex(data.id.toUpperCase());
+  if (idx < 0) return jsonOut({ok: false, error: 'クーポンが見つかりません'});
+  var row = idx + 2;
+  if (logSheet.getRange(row, 7).getValue() === '使用済') return jsonOut({ok: false, error: 'このクーポンは使用済です'});
+  logSheet.getRange(row, 7).setValue('使用済');
+  return jsonOut({ok: true, status: '使用済'});
 }
 
-/* ── 在庫リセット ── */
 function handleReset(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var stockSheet  = ss.getSheetByName('在庫');
-  var configSheet = ss.getSheetByName('設定');
-  var ichi = Number(data.ichi) || 0, ni = Number(data.ni) || 0, san = Number(data.san) || 0;
-  stockSheet.getRange('B1').setValue(ichi);
-  stockSheet.getRange('B2').setValue(ni);
-  stockSheet.getRange('B3').setValue(san);
-  configSheet.getRange('B4').setValue(ichi);
-  configSheet.getRange('B5').setValue(ni);
-  configSheet.getRange('B6').setValue(san);
-  return jsonOut({ok: true, stock: {ichi: ichi, ni: ni, san: san}});
+  var ichi = Number(data.ichi)||0, ni = Number(data.ni)||0, san = Number(data.san)||0;
+  // バッチ書き込み
+  ss.getSheetByName('在庫').getRange('B1:B3').setValues([[ichi],[ni],[san]]);
+  ss.getSheetByName('設定').getRange('B4:B6').setValues([[ichi],[ni],[san]]);
+  return jsonOut({ok: true, stock: {ichi:ichi, ni:ni, san:san}});
 }
 
-/* ── 設定変更 ── */
 function handleConfig(data) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var configSheet = ss.getSheetByName('設定');
-  configSheet.getRange('B1').setValue(Number(data.minAmount) || 3000);
-  configSheet.getRange('B2').setValue(Number(data.bonusAmount) || 5000);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName('設定')
+    .getRange('B1:B2').setValues([[Number(data.minAmount)||3000],[Number(data.bonusAmount)||5000]]);
   return jsonOut({ok: true});
 }
 
-/* ── ヘルパー ── */
+/* ══ ヘルパー ══ */
+function findCouponRowIndex(id) {
+  var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ログ');
+  var lastRow = logSheet.getLastRow();
+  if (lastRow < 2) return -1;
+  var ids = logSheet.getRange(2, 6, lastRow - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).toUpperCase() === id) return i;
+  }
+  return -1;
+}
+
 function findCouponRow(id) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var logSheet = ss.getSheetByName('ログ');
+  var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ログ');
   var lastRow = logSheet.getLastRow();
   if (lastRow < 2) return null;
   var data = logSheet.getRange(2, 1, lastRow - 1, 8).getValues();
@@ -283,7 +224,15 @@ function rowToCoupon(row) {
   return {
     date: row[0] ? Utilities.formatDate(new Date(row[0]), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm') : '',
     amount: row[1], rank: row[2], prize: row[3],
-    id: String(row[5]), status: row[6] || '未使用', name: row[7] || ''
+    id: String(row[5]), status: row[6]||'未使用', name: row[7]||''
+  };
+}
+
+function formatLogRow(row) {
+  return {
+    date: row[0] ? Utilities.formatDate(new Date(row[0]), 'Asia/Tokyo', 'MM/dd HH:mm') : '',
+    amount: row[1], rank: row[2], prize: row[3],
+    id: String(row[5]), status: row[6]||'未使用', name: row[7]||''
   };
 }
 
@@ -292,26 +241,20 @@ function jsonOut(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/* ═══════════════════════════════════════════════════════════
- *  セットアップ
- * ═══════════════════════════════════════════════════════════ */
+/* ══ セットアップ ══ */
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   var s = ss.getSheetByName('在庫') || ss.insertSheet('在庫');
-  s.getRange('A1').setValue('1等（マグカップ）');   s.getRange('B1').setValue(6);
-  s.getRange('A2').setValue('2等（1,000円OFF）');    s.getRange('B2').setValue(3);
-  s.getRange('A3').setValue('3等（100円OFF）');      s.getRange('B3').setValue(50);
+  s.getRange('A1:B3').setValues([['1等（マグカップ）',6],['2等（500円OFF）',12],['3等（100円OFF）',40]]);
   s.getRange('A1:A3').setFontWeight('bold');
   s.setColumnWidth(1, 200); s.setColumnWidth(2, 100);
 
   s = ss.getSheetByName('設定') || ss.insertSheet('設定');
-  s.getRange('A1').setValue('最低金額');              s.getRange('B1').setValue(3000);
-  s.getRange('A2').setValue('ボーナス金額（2回抽選）'); s.getRange('B2').setValue(5000);
-  s.getRange('A3').setValue('');
-  s.getRange('A4').setValue('初期在庫 1等');          s.getRange('B4').setValue(6);
-  s.getRange('A5').setValue('初期在庫 2等');          s.getRange('B5').setValue(3);
-  s.getRange('A6').setValue('初期在庫 3等');          s.getRange('B6').setValue(50);
+  s.getRange('A1:B6').setValues([
+    ['最低金額',3000],['ボーナス金額（2回抽選）',6000],['',''],
+    ['初期在庫 1等',6],['初期在庫 2等',12],['初期在庫 3等',40]
+  ]);
   s.getRange('A1:A6').setFontWeight('bold');
   s.setColumnWidth(1, 220); s.setColumnWidth(2, 100);
 
@@ -325,19 +268,20 @@ function setupSheets() {
   s = ss.getSheetByName('利用規約') || ss.insertSheet('利用規約');
   s.getRange('A1').setValue('利用規約（1行に1項目）');
   s.getRange('A1').setFontWeight('bold');
-  s.getRange('A2').setValue('当日のお買い上げ金額 3,000円（税込）以上で1回抽選できます');
-  s.getRange('A3').setValue('5,000円（税込）以上で2回抽選できます');
-  s.getRange('A4').setValue('お一人様、1会計につき最大2回までとなります');
-  s.getRange('A5').setValue('景品がなくなり次第、終了となります');
-  s.getRange('A6').setValue('当選結果に関するお問い合わせにはお答えできません');
-  s.getRange('A7').setValue('景品の交換・返品・換金はできません');
-  s.getRange('A8').setValue('クーポンの有効期限は発行日より90日間です');
-  s.getRange('A9').setValue('本キャンペーンの内容は予告なく変更・終了する場合があります');
-  s.getRange('A10').setValue('スタッフの指示に従ってご参加ください');
+  s.getRange('A2:A10').setValues([
+    ['当日のお買い上げ金額 3,000円（税込）以上で1回抽選できます'],
+    ['6,000円（税込）以上で2回抽選できます'],
+    ['お一人様、1会計につき最大2回までとなります'],
+    ['景品がなくなり次第、終了となります'],
+    ['当選結果に関するお問い合わせにはお答えできません'],
+    ['景品の交換・返品・換金はできません'],
+    ['クーポンの有効期限は発行日より90日間です'],
+    ['本キャンペーンの内容は予告なく変更・終了する場合があります'],
+    ['スタッフの指示に従ってご参加ください']
+  ]);
   s.setColumnWidth(1, 500);
 
   var sheet1 = ss.getSheetByName('Sheet1') || ss.getSheetByName('シート1');
   if (sheet1 && ss.getSheets().length > 1) { try { ss.deleteSheet(sheet1); } catch(e) {} }
-
-  SpreadsheetApp.getUi().alert('セットアップ完了 ✓\n\n「デプロイ」→「新しいデプロイ」で公開してください。');
+  SpreadsheetApp.getUi().alert('セットアップ完了 ✓');
 }
